@@ -95,6 +95,8 @@ def trainBatch(net, criterion, optimizer, train_iter):
     cost.backward()
     optimizer.step()
     return cost
+
+
 def training():
     for total_steps in range(params.niter):
         train_iter = iter(train_loader)
@@ -111,8 +113,8 @@ def training():
                 print('[%d/%d][%d/%d] Loss: %f' %
                       (total_steps, params.niter, i, len(train_loader), loss_avg.val()))
                 loss_avg.reset()
-            if i % params.valInterval == 0:
-                val(crnn, test_dataset, criterion)
+            # if i % params.valInterval == 0:
+            #     val(crnn, test_dataset, criterion)
         if (total_steps+1) % params.saveInterval == 0:
             torch.save(crnn.state_dict(), '{0}/crnn_Rec_done_{1}_{2}.pth'.format(params.experiment, total_steps, i))
 
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     cudnn.benchmark = True
     
     # store model path
-    if not os.path.exists('./expr):
+    if not os.path.exists('./expr'):
         os.mkdir('./expr')
 
     # read train set

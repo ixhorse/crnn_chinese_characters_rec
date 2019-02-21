@@ -5,6 +5,9 @@ import re
 from PIL import Image
 import numpy as np
 import imghdr
+import glob
+import tqdm
+import pdb
 
 
 def checkImageIsValid(imageBin):
@@ -25,7 +28,10 @@ def checkImageIsValid(imageBin):
 def writeCache(env, cache):
     with env.begin(write=True) as txn:
         for k, v in cache.items():
-            txn.put(k, v)
+            try:
+                txn.put(k, v)
+            except:
+                pdb.set_trace()
 			
 def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkValid=True):
     """
@@ -42,8 +48,9 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
     env = lmdb.open(outputPath, map_size=1099511627776)
     cache = {}
     cnt = 1
-    for i in range(nSamples):   
-        imagePath = ''.join(imagePathList[i]).split()[0].replace('\n','').replace('\r\n','')
+    for i in range(nSamples):
+        imagePath = imagePathList[i]
+        # imagePath = ''.join(imagePathList[i]).split()[0].replace('\n','').replace('\r\n','')
         #print(imagePath)
         label = ''.join(labelList[i])
         print(label)
@@ -51,7 +58,7 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
         #     print('%s does not exist' % imagePath)
         #     continue	
 		
-        with open('.'+imagePath, 'r') as f:
+        with open(imagePath, 'r') as f:
             imageBin = f.read()
 
 
@@ -79,13 +86,23 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
 	
 
 if __name__ == '__main__':
+    home_path = os.path.expanduser('~')
+    data_root = os.path.join(home_path, 'data/Datafountain')
+    text_path = os.path.join(data_root, 'text')
+    text_image_dir = os.path.join(text_path, 'image')
+    text_label_dir = os.path.join(text_path, 'label')
     outputPath = "./lmdb"
-    imgdata = open("./train.txt")
-    imagePathList = list(imgdata)
-    
+
+    imagePathList = glob.glob(text_image_dir + '/*.jpg')
     labelList = []
-    for line in imagePathList:
-        word = line.split()[1]
-        labelList.append(word)
+    print('reading label txt...')
+    for img_path in tqdm.tqdm(imagePathList):
+        name = os.path.split(img_path)[-1][:-4] + '.txt'
+        label_path = os.path.join(text_label_dir, name)
+        with open(label_path, 'r') as f:
+            words = f.readline()
+            labelList.append(words)
+    print('done.')
+
     createDataset(outputPath, imagePathList, labelList)
 
