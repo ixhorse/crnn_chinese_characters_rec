@@ -76,6 +76,19 @@ class resizeNormalize(object):
         self.toTensor = transforms.ToTensor()
 
     def __call__(self, img):
+        # padding
+        ratio = self.size[0] / self.size[1]
+        w, h = img.size
+        if w / h < ratio:     
+            t = int(h * ratio)
+            w_padding = (t - w) // 2
+            img = img.crop((-w_padding, 0, w+w_padding, h))
+        else:
+            t = int(w / ratio)
+            h_padding = (t - h) // 2
+            img = img.crop((0, -h_padding, w, h+h_padding))
+
+        # resize
         img = img.resize(self.size, self.interpolation)
         img = self.toTensor(img)
         img.sub_(0.5).div_(0.5)
@@ -128,7 +141,7 @@ class alignCollate(object):
             ratios.sort()
             max_ratio = ratios[-1]
             imgW = int(np.floor(max_ratio * imgH))
-            imgW = max(imgH * self.min_ratio, imgW)  # assure imgH >= imgW
+            # imgW = max(imgH * self.min_ratio, imgW)  # assure imgH >= imgW
 
         transform = resizeNormalize((imgW, imgH))
         images = [transform(image) for image in images]

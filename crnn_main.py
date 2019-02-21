@@ -148,7 +148,7 @@ if __name__ == '__main__':
     # read test set
     # images will be resize to 32*160
     test_dataset = dataset.lmdbDataset(
-        root=opt.valroot, transform=dataset.resizeNormalize((160, 32)))
+        root=opt.valroot, transform=dataset.resizeNormalize((32, 160)))
 
     nclass = len(params.alphabet) + 1
     nc = 1
