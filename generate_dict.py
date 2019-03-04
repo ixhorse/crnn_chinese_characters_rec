@@ -5,13 +5,20 @@ import sys
 import csv
 from functools import reduce
 
-label_path = '/home/mcc/data/Datafountain/traindataset/train_lable.csv'
+train_label_path = '/home/mcc/data/Datafountain/traindataset/train_lable.csv'
+val_label_path = '/home/mcc/data/Datafountain/traindataset/verify_lable.csv'
 
-with open(label_path, 'r') as f:
+with open(train_label_path, 'r') as f:
     reader = csv.reader(f)
-    data = list(reader)
+    train_data = list(reader)
 
-text = [row[9] for row in data[1:]]
+text = [row[9] for row in train_data[1:]]
+
+with open(val_label_path, 'r') as f:
+    reader = csv.reader(f)
+    val_data = list(reader)
+
+text += [row[9] for row in val_data[1:]]
 
 def add(a, b):
     return a + b

@@ -89,9 +89,9 @@ if __name__ == '__main__':
     home_path = os.path.expanduser('~')
     data_root = os.path.join(home_path, 'data/Datafountain')
     text_path = os.path.join(data_root, 'text')
-    text_image_dir = os.path.join(text_path, 'image')
-    text_label_dir = os.path.join(text_path, 'label')
-    outputPath = "./lmdb"
+    text_image_dir = os.path.join(text_path, 'verify_image')
+    text_label_dir = os.path.join(text_path, 'verify_label')
+    outputPath = "./verify_lmdb"
 
     imagePathList = glob.glob(text_image_dir + '/*.jpg')
     labelList = []
@@ -100,9 +100,16 @@ if __name__ == '__main__':
         name = os.path.split(img_path)[-1][:-4] + '.txt'
         label_path = os.path.join(text_label_dir, name)
         with open(label_path, 'r') as f:
-            words = f.readline()
+            words = f.readline().strip()
             labelList.append(words)
     print('done.')
+
+    # sort
+    label_length = [(len(x),i) for i,x in enumerate(labelList)]
+    label_length = sorted(label_length, key=lambda x:x[0])
+    index = [x[1] for x in label_length]
+    labelList = [labelList[i] for i in index]
+    imagePathList = [imagePathList[i] for i in index]
 
     createDataset(outputPath, imagePathList, labelList)
 

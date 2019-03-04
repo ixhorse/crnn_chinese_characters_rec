@@ -6,14 +6,18 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
+from torchvision import transforms
+
 import numpy as np
 from warpctc_pytorch import CTCLoss
 import os
 import utils
 import dataset
-import models.crnn as crnn
+# import models.crnn as crnn
+import models.crnn_resnet as crnn
 import re
 import params
+import adabound
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--trainroot', required=True, help='path to dataset')
@@ -131,24 +135,26 @@ if __name__ == '__main__':
         os.mkdir('./expr')
 
     # read train set
-    train_dataset = dataset.lmdbDataset(root=opt.trainroot)
-    assert train_dataset
+
+    data_transform = transforms.Compose([
+            transforms.ColorJitter(brightness=0.3, contrast=0.3),
+            transforms.RandomAffine(degrees=0, scale=(0.9, 1.07), shear=3),
+        ])
+    train_dataset = dataset.lmdbDataset(root=opt.trainroot, transform=data_transform)
+    val_dataset = dataset.lmdbDataset(root=opt.valroot, transform=data_transform)
+    concat_dataset = torch.utils.data.ConcatDataset([train_dataset, val_dataset])
+
     if not params.random_sample:
-        sampler = dataset.randomSequentialSampler(train_dataset, params.batchSize)
+        sampler = dataset.randomSequentialSampler(concat_dataset, params.batchSize)
     else:
         sampler = None
-
-    # images will be resize to 32*160
+    
+    # images will be resize to 32*320
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=params.batchSize,
+        concat_dataset, batch_size=params.batchSize,
         shuffle=True, sampler=sampler,
         num_workers=int(params.workers),
         collate_fn=dataset.alignCollate(imgH=params.imgH, imgW=params.imgW, keep_ratio=params.keep_ratio))
-
-    # read test set
-    # images will be resize to 32*160
-    test_dataset = dataset.lmdbDataset(
-        root=opt.valroot, transform=dataset.resizeNormalize((32, 160)))
 
     nclass = len(params.alphabet) + 1
     nc = 1
@@ -167,7 +173,7 @@ if __name__ == '__main__':
         image = image.cuda()
         criterion = criterion.cuda()
 
-    crnn.apply(weights_init)
+    # crnn.apply(weights_init)
     if params.crnn != '':
         print('loading pretrained model from %s' % params.crnn)
         crnn.load_state_dict(torch.load(params.crnn))
@@ -185,6 +191,8 @@ if __name__ == '__main__':
                                betas=(params.beta1, 0.999))
     elif params.adadelta:
         optimizer = optim.Adadelta(crnn.parameters(), lr=params.lr)
+    elif params.adabound:
+        optimizer = adabound.AdaBound(crnn.parameters(), lr=params.lr, final_lr=0.001)
     else:
         optimizer = optim.RMSprop(crnn.parameters(), lr=params.lr)
 
